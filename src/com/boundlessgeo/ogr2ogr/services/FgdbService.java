@@ -2,7 +2,6 @@ package com.boundlessgeo.ogr2ogr.services;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
@@ -13,9 +12,13 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
 @Path("/fgdb/{fgdbname}")
 public class FgdbService {
+	
 	
 	@GET
 	public String getFgdb(@PathParam("fgdbname") String fgdbName){
@@ -23,14 +26,17 @@ public class FgdbService {
 	}
 	
 	@POST
-	public String getFgdb(@PathParam("fgdbname") String fgdbName, String geoJson){
+	@Produces("application/zip")
+	public Response getFgdb(@PathParam("fgdbname") String fgdbName, String geoJson){
+		String fgdbDirectory = "/opt/fgdb/";
 		Date now = new Date();
 		String fName = fgdbName + "-" + now.getTime();
+		
 		//Create a zip file name, named for the name of the geodatabase to be created.
-		String outFileName =  fName + ".zip";
+		String outFileName =  fgdbDirectory + fName + ".zip";
 		
 		// ogr2ogr command string, these are the command line arguments you would use normally
-		String[] cmd = {"-f", "FileGDB", fName+".gdb", geoJson};
+		String[] cmd = {"-f", "FileGDB", fgdbDirectory + fName+".gdb", geoJson};
 		
 		//Execute the ogr2ogr command
 		ogr2ogr.main(cmd);
@@ -41,7 +47,7 @@ public class FgdbService {
 			ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(outFileName));
 			
 			//Create File object from the source FileGDB
-			File fgdbDir = new File(fName+".gdb");
+			File fgdbDir = new File(fgdbDirectory + fName+".gdb");
 			
 			addDirectory(zout, fgdbDir);
 			
@@ -53,7 +59,11 @@ public class FgdbService {
 			e.printStackTrace();
 		}
 		
-		return "I've been posted";
+		File outFile = new File(outFileName);
+		ResponseBuilder responseBuilder = Response.ok((Object) outFile);
+		responseBuilder.header("Content-Disposition", "attachment; filename=\"fgdb.zip\"");
+		
+		return responseBuilder.build();
 	}
 	
 	private static void addDirectory(ZipOutputStream zout, File fgdbDir){
