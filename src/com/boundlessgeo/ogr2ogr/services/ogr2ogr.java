@@ -95,7 +95,7 @@ public class ogr2ogr
 /*                                main()                                */
 /************************************************************************/
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws ogr2ogrException
     {
         String pszFormat = "ESRI Shapefile";
         String pszDataSource = null;
@@ -150,10 +150,11 @@ public class ogr2ogr
         
         if( args.length < 2 )
         {
-            Usage();
-            System.exit( -1 );
+            String usage=Usage();
+            throw new ogr2ogrException( usage );
         }
-    
+
+    	StringBuilder sb=new StringBuilder();
         for( int iArg = 0; iArg < args.length; iArg++ )
         {
             if( args[iArg].equalsIgnoreCase("-f") && iArg < args.length-1 )
@@ -241,8 +242,8 @@ public class ogr2ogr
                     eGType = ogr.wkbMultiPolygon25D;
                 else
                 {
-                    System.err.println("-nlt " + args[iArg+1] + ": type not recognised.");
-                    System.exit( 1 );
+                    sb.append("-nlt " + args[iArg+1] + ": type not recognised.");
+                    throw new ogr2ogrException( sb.toString() );
                 }
                 iArg++;
             }
@@ -329,8 +330,9 @@ public class ogr2ogr
                     }
                     else
                     {
-                        System.err.println("Unhandled type for fieldtypeasstring option : " + token);
-                        Usage();
+                        sb.append("Unhandled type for fieldtypeasstring option : " + token);
+                        sb.append(Usage());
+
                     }
                 }
             }
@@ -368,8 +370,8 @@ public class ogr2ogr
                     poClipSrc = Geometry.CreateFromWkt(args[iArg+1]);
                     if (poClipSrc == null)
                     {
-                        System.err.print("FAILURE: Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT\n\n");
-                        Usage();
+                        sb.append("FAILURE: Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT\n\n");
+                        sb.append(Usage());
                     }
                     iArg ++;
                 }
@@ -422,7 +424,7 @@ public class ogr2ogr
                     poClipDst = Geometry.CreateFromWkt(args[iArg+1]);
                     if (poClipDst == null)
                     {
-                        System.err.print("FAILURE: Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT\n\n");
+                        sb.append("FAILURE: Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT\n\n");
                         Usage();
                     }
                     iArg ++;
@@ -478,7 +480,7 @@ public class ogr2ogr
 
         if( bPreserveFID && bExplodeCollections )
         {
-            System.err.print("FAILURE: cannot use -preserve_fid and -explodecollections at the same time\n\n" );
+            sb.append("FAILURE: cannot use -preserve_fid and -explodecollections at the same time\n\n" );
             Usage();
         }
 
@@ -487,7 +489,7 @@ public class ogr2ogr
             poClipSrc = LoadGeometry(pszClipSrcDS, pszClipSrcSQL, pszClipSrcLayer, pszClipSrcWhere);
             if (poClipSrc == null)
             {
-                System.err.print("FAILURE: cannot load source clip geometry\n\n" );
+                sb.append("FAILURE: cannot load source clip geometry\n\n" );
                 Usage();
             }
         }
@@ -497,7 +499,7 @@ public class ogr2ogr
                 poClipSrc = poSpatialFilter.Clone();
             if (poClipSrc == null)
             {
-                System.err.print("FAILURE: -clipsrc must be used with -spat option or a\n" +
+                sb.append("FAILURE: -clipsrc must be used with -spat option or a\n" +
                                 "bounding box, WKT string or datasource must be specified\n\n");
                 Usage();
             }
@@ -508,7 +510,7 @@ public class ogr2ogr
             poClipDst = LoadGeometry(pszClipDstDS, pszClipDstSQL, pszClipDstLayer, pszClipDstWhere);
             if (poClipDst == null)
             {
-                System.err.print("FAILURE: cannot load dest clip geometry\n\n" );
+                sb.append("FAILURE: cannot load dest clip geometry\n\n" );
                 Usage();
             }
         }
@@ -524,15 +526,15 @@ public class ogr2ogr
     /* -------------------------------------------------------------------- */
         if( poDS == null )
         {
-            System.err.println("FAILURE:\n" + 
+            sb.append("FAILURE:\n" + 
                     "Unable to open datasource ` " + pszDataSource + "' with the following drivers.");
     
             for( int iDriver = 0; iDriver < ogr.GetDriverCount(); iDriver++ )
             {
-                System.err.println("  . " + ogr.GetDriver(iDriver).GetName() );
+                sb.append("  . " + ogr.GetDriver(iDriver).GetName() );
             }
     
-            System.exit( 1 );
+            throw new ogr2ogrException( sb.toString());
         }
     
     /* -------------------------------------------------------------------- */
@@ -563,15 +565,15 @@ public class ogr2ogr
 
                 if (bUpdate)
                 {
-                    System.err.println("FAILURE:\n" +
+                    sb.append("FAILURE:\n" +
                             "Unable to open existing output datasource `" + pszDestDataSource + "'.");
-                    System.exit( 1 );
+                    throw new ogr2ogrException( sb.toString());
                 }
             }
     
             else if( papszDSCO.size() > 0 )
             {
-                System.err.println("WARNING: Datasource creation options ignored since an existing datasource\n" +
+                sb.append("WARNING: Datasource creation options ignored since an existing datasource\n" +
                         "         being updated." );
             }
 
@@ -589,20 +591,20 @@ public class ogr2ogr
             poDriver = ogr.GetDriverByName(pszFormat);
             if( poDriver == null )
             {
-                System.err.println("Unable to find driver `" + pszFormat +"'." );
-                System.err.println( "The following drivers are available:" );
+                sb.append("Unable to find driver `" + pszFormat +"'." );
+                sb.append( "The following drivers are available:" );
             
                 for( iDriver = 0; iDriver < ogr.GetDriverCount(); iDriver++ )
                 {
-                    System.err.println("  . " + ogr.GetDriver(iDriver).GetName() );
+                    sb.append("  . " + ogr.GetDriver(iDriver).GetName() );
                 }
-                System.exit( 1 );
+                throw new ogr2ogrException( sb.toString());
             }
     
             if( poDriver.TestCapability( ogr.ODrCCreateDataSource ) == false )
             {
-                System.err.println( pszFormat + " driver does not support data source creation.");
-                System.exit( 1 );
+                sb.append( pszFormat + " driver does not support data source creation.");
+                throw new ogr2ogrException( sb.toString() );
             }
 
     /* -------------------------------------------------------------------- */
@@ -625,10 +627,10 @@ public class ogr2ogr
                 {
                     if (!f.mkdir())
                     {
-                        System.err.println(
+                        sb.append(
                             "Failed to create directory " + pszDestDataSource + "\n" +
                             "for shapefile datastore.");
-                        System.exit(1);
+                        throw new ogr2ogrException(sb.toString());
                     }
                 }
             }
@@ -639,8 +641,8 @@ public class ogr2ogr
             poODS = poDriver.CreateDataSource( pszDestDataSource, papszDSCO );
             if( poODS == null )
             {
-                System.err.println( pszFormat + " driver failed to create "+ pszDestDataSource );
-                System.exit( 1 );
+                sb.append( pszFormat + " driver failed to create "+ pszDestDataSource );
+                throw new ogr2ogrException( sb.toString() );
             }
         }
     
@@ -652,8 +654,8 @@ public class ogr2ogr
             poOutputSRS = new SpatialReference();
             if( poOutputSRS.SetFromUserInput( pszOutputSRSDef ) != 0 )
             {
-                System.err.println( "Failed to process SRS definition: " + pszOutputSRSDef );
-                System.exit( 1 );
+                sb.append( "Failed to process SRS definition: " + pszOutputSRSDef );
+                throw new ogr2ogrException( sb.toString() );
             }
         }
     
@@ -665,8 +667,8 @@ public class ogr2ogr
             poSourceSRS = new SpatialReference();
             if( poSourceSRS.SetFromUserInput( pszSourceSRSDef ) != 0 )
             {
-                System.err.println( "Failed to process SRS definition: " + pszSourceSRSDef );
-                System.exit( 1 );
+                sb.append( "Failed to process SRS definition: " + pszSourceSRSDef );
+                throw new ogr2ogrException( sb.toString() );
             }
         }
     
@@ -678,9 +680,9 @@ public class ogr2ogr
             Layer poResultSet;
     
             if( pszWHERE != null )
-                System.err.println( "-where clause ignored in combination with -sql." );
+                sb.append( "-where clause ignored in combination with -sql." );
             if( papszLayers.size() > 0 )
-                System.err.println( "layer names ignored in combination with -sql." );
+                sb.append( "layer names ignored in combination with -sql." );
             
             poResultSet = poDS.ExecuteSQL( pszSQLStatement, poSpatialFilter, 
                                             null );
@@ -692,7 +694,7 @@ public class ogr2ogr
                 {
                     if (!poResultSet.TestCapability(ogr.OLCFastFeatureCount))
                     {
-                        System.err.println( "Progress turned off as fast feature count is not available.");
+                        sb.append( "Progress turned off as fast feature count is not available.");
                         bDisplayProgress = false;
                     }
                     else
@@ -727,11 +729,11 @@ public class ogr2ogr
                                     nCountLayerFeatures, poClipSrc, poClipDst, bExplodeCollections,
                                     pszZField, pszWHERE, pfnProgress ))
                 {
-                    System.err.println(
+                    sb.append(
                             "Terminating translation prematurely after failed\n" +
                             "translation from sql statement." );
     
-                    System.exit( 1 );
+                    throw new ogr2ogrException( sb.toString() );
                 }
                 poDS.ReleaseResultSet( poResultSet );
             }
@@ -757,8 +759,8 @@ public class ogr2ogr
 
                     if( poLayer == null )
                     {
-                        System.err.println("FAILURE: Couldn't fetch advertised layer " + iLayer + "!");
-                        System.exit( 1 );
+                        sb.append("FAILURE: Couldn't fetch advertised layer " + iLayer + "!");
+                        throw new ogr2ogrException( sb.toString() );
                     }
 
                     papoLayers[iLayer] = poLayer;
@@ -780,8 +782,8 @@ public class ogr2ogr
 
                     if( poLayer == null )
                     {
-                        System.err.println("FAILURE: Couldn't fetch advertised layer " + (String)papszLayers.get(iLayer) + "!");
-                        System.exit( 1 );
+                        sb.append("FAILURE: Couldn't fetch advertised layer " + (String)papszLayers.get(iLayer) + "!");
+                        throw new ogr2ogrException( sb.toString() );
                     }
 
                     papoLayers[iLayer] = poLayer;
@@ -821,9 +823,9 @@ public class ogr2ogr
                 {
                     if( poLayer.SetAttributeFilter( pszWHERE ) != ogr.OGRERR_NONE )
                     {
-                        System.err.println("FAILURE: SetAttributeFilter(" + pszWHERE + ") failed.");
+                        sb.append("FAILURE: SetAttributeFilter(" + pszWHERE + ") failed.");
                         if (!bSkipFailures)
-                            System.exit( 1 );
+                            throw new ogr2ogrException( sb.toString() );
                     }
                 }
 
@@ -834,7 +836,7 @@ public class ogr2ogr
                 {
                     if (!poLayer.TestCapability(ogr.OLCFastFeatureCount))
                     {
-                        System.err.println("Progress turned off as fast feature count is not available.");
+                        sb.append("Progress turned off as fast feature count is not available.");
                         bDisplayProgress = false;
                     }
                     else
@@ -870,11 +872,11 @@ public class ogr2ogr
                                     pszZField, pszWHERE, pfnProgress) 
                     && !bSkipFailures )
                 {
-                    System.err.println(
+                    sb.append(
                             "Terminating translation prematurely after failed\n" +
                             "translation of layer " + poLayer.GetLayerDefn().GetName() + " (use -skipfailures to skip errors)");
 
-                    System.exit( 1 );
+                    throw new ogr2ogrException( sb.toString() );
                 }
             }
         }
@@ -892,10 +894,11 @@ public class ogr2ogr
     /*                               Usage()                                */
     /************************************************************************/
     
-    static void Usage()
+    static String Usage()
     
     {
-        System.out.print( "Usage: ogr2ogr [--help-general] [-skipfailures] [-append] [-update] [-gt n]\n" +
+    	StringBuilder so=new StringBuilder();
+        so.append( "Usage: ogr2ogr [--help-general] [-skipfailures] [-append] [-update] [-gt n]\n" +
                 "               [-select field_list] [-where restricted_where] \n" +
                 "               [-progress] [-sql <sql statement>] \n" + 
                 "               [-spat xmin ymin xmax ymax] [-preserve_fid] [-fid FID]\n" +
@@ -914,10 +917,10 @@ public class ogr2ogr
             Driver poDriver = ogr.GetDriver(iDriver);
     
             if( poDriver.TestCapability( ogr.ODrCCreateDataSource ) )
-                System.out.print( "     -f \"" + poDriver.GetName() + "\"\n" );
+                so.append( "     -f \"" + poDriver.GetName() + "\"\n" );
         }
     
-        System.out.print( " -append: Append to existing layer instead of creating new if it exists\n" +
+        so.append( " -append: Append to existing layer instead of creating new if it exists\n" +
                 " -overwrite: delete the output layer and recreate it empty\n" +
                 " -update: Open existing output datasource in update mode\n" +
                 " -progress: Display progress on terminal. Only works if input layers have the \"fast feature count\" capability\n" +
@@ -943,7 +946,7 @@ public class ogr2ogr
                 "      Integer, Real, String, Date, Time, DateTime, Binary, IntegerList, RealList,\n" +
                 "      StringList. Special value All can be used to convert all fields to strings.\n");
     
-        System.out.print(" -a_srs srs_def: Assign an output SRS\n" +
+        so.append(" -a_srs srs_def: Assign an output SRS\n" +
             " -t_srs srs_def: Reproject/transform to this SRS on output\n" +
             " -s_srs srs_def: Override source SRS\n" +
             "\n" + 
@@ -951,7 +954,7 @@ public class ogr2ogr
             " or a well known definition (ie. EPSG:4326) or a file with a WKT\n" +
             " definition.\n" );
     
-        System.exit( 1 );
+        return so.toString();
     }
 
     static int CSLFindString(Vector v, String str)
@@ -1005,7 +1008,7 @@ public class ogr2ogr
             
         if (poLyr == null)
         {
-            System.err.print("Failed to identify source layer from datasource.\n");
+            System.err.println("Failed to identify source layer from datasource.\n");
             poDS.delete();
             return null;
         }
@@ -1037,7 +1040,7 @@ public class ogr2ogr
                 }
                 else
                 {
-                    System.err.print("ERROR: Geometry not of polygon type.\n" );
+                	System.err.println("ERROR: Geometry not of polygon type.\n" );
                     if( pszSQL != null )
                         poDS.ReleaseResultSet( poLyr );
                     poDS.delete();
@@ -1101,7 +1104,8 @@ public class ogr2ogr
 
     /************************************************************************/
     /*                           TranslateLayer()                           */
-    /************************************************************************/
+    /**
+     * @throws ogr2ogrException **********************************************************************/
     
     static boolean TranslateLayer( DataSource poSrcDS, 
                             Layer poSrcLayer,
@@ -1122,7 +1126,7 @@ public class ogr2ogr
                             boolean bExplodeCollections,
                             String pszZField,
                             String pszWHERE,
-                            ProgressCallback pfnProgress)
+                            ProgressCallback pfnProgress) throws ogr2ogrException
     
     {
         Layer    poDstLayer;
@@ -1154,9 +1158,10 @@ public class ogr2ogr
     
             if( poSourceSRS == null )
             {
-                System.err.println("Can't transform coordinates, source layer has no\n" +
+            	StringBuilder sb=new StringBuilder();
+                sb.append("Can't transform coordinates, source layer has no\n" +
                         "coordinate system.  Use -s_srs to set one." );
-                System.exit( 1 );
+                throw new ogr2ogrException(sb.toString());
             }
     
             /*CPLAssert( null != poSourceSRS );
@@ -1167,18 +1172,27 @@ public class ogr2ogr
             {
                 String pszWKT = null;
     
-                System.err.println("Failed to create coordinate transformation between the\n" +
+                StringBuilder sb = new StringBuilder();
+                sb.append("Failed to create coordinate transformation between the\n" +
                     "following coordinate systems.  This may be because they\n" +
                     "are not transformable, or because projection services\n" +
                     "(PROJ.4 DLL/.so) could not be loaded." );
                 
                 pszWKT = poSourceSRS.ExportToPrettyWkt( 0 );
-                System.err.println( "Source:\n" + pszWKT );
+                sb.append( "Source:\n" + pszWKT );
                 
                 pszWKT = poOutputSRS.ExportToPrettyWkt( 0 );
-                System.err.println( "Target:\n" + pszWKT );
-                System.exit( 1 );
-            }
+                sb.append( "Target:\n" + pszWKT );
+                String err="Failed to create coordinate transformation between the\n" +
+                        "following coordinate systems.  This may be because they\n" +
+                        "are not transformable, or because projection services\n" +
+                        "(PROJ.4 DLL/.so) could not be loaded." +
+                        "Source:\n"+
+                        poSourceSRS.ExportToPrettyWkt( 0 )+
+                        "Target:\n"+poOutputSRS.ExportToPrettyWkt( 0 );
+                sb.append(err);
+                throw new ogr2ogrException(err);
+                }
         }
         
     /* -------------------------------------------------------------------- */
@@ -1231,8 +1245,10 @@ public class ogr2ogr
         {
             if( poDstDS.DeleteLayer( iLayer ) != 0 )
             {
-                System.err.println(
+            	StringBuilder sb=new StringBuilder();
+                sb.append(
                         "DeleteLayer() failed when overwrite requested." );
+                System.err.println(sb);
                 return false;
             }
             poDstLayer = null;
@@ -1274,8 +1290,10 @@ public class ogr2ogr
     
             if( poDstDS.TestCapability( ogr.ODsCCreateLayer ) == false)
             {
-                System.err.println(
+            	StringBuilder sb=new StringBuilder();
+                sb.append(
                 "Layer " + pszNewLayerName + "not found, and CreateLayer not supported by driver.");
+                System.out.println(sb.toString());
                 return false;
             }
     
@@ -1295,16 +1313,20 @@ public class ogr2ogr
     /* -------------------------------------------------------------------- */
         else if( !bAppend )
         {
-            System.err.println("FAILED: Layer " + pszNewLayerName + "already exists, and -append not specified.\n" +
+        	StringBuilder sb=new StringBuilder();
+            sb.append("FAILED: Layer " + pszNewLayerName + "already exists, and -append not specified.\n" +
                                 "        Consider using -append, or -overwrite.");
+            System.err.println(sb.toString());
             return false;
         }
         else
         {
             if( papszLCO.size() > 0 )
             {
-                System.err.println("WARNING: Layer creation options ignored since an existing layer is\n" +
+            	StringBuilder sb=new StringBuilder();
+                sb.append("WARNING: Layer creation options ignored since an existing layer is\n" +
                         "         being appended to." );
+                System.err.println(sb.toString());
             }
         }
     
@@ -1365,8 +1387,11 @@ public class ogr2ogr
                         if (poDstFDefn != null &&
                             poDstFDefn.GetFieldCount() != nDstFieldCount + 1)
                         {
-                            System.err.println(
+                        	StringBuilder sb=new StringBuilder();
+                            sb.append(
                                     "The output driver has claimed to have added the " + oFieldDefn.GetNameRef() + " field, but it did not!");
+
+                            System.err.println(sb.toString());
                         }
                         else
                         {
@@ -1378,8 +1403,11 @@ public class ogr2ogr
                 }
                 else
                 {
-                    System.err.println("Field '" + (String)papszSelFields.get(iField) + "' not found in source layer.");
-                        if( !bSkipFailures )
+                	StringBuilder sb=new StringBuilder();
+                    sb.append("Field '" + (String)papszSelFields.get(iField) + "' not found in source layer.");
+
+                    System.err.println(sb.toString());    
+                    if( !bSkipFailures )
                             return false;
                 }
             }
@@ -1456,8 +1484,11 @@ public class ogr2ogr
                     if (poDstFDefn != null &&
                         poDstFDefn.GetFieldCount() != nDstFieldCount + 1)
                     {
-                        System.err.println(
+                    	StringBuilder sb=new StringBuilder();
+                        sb.append(
                                 "The output driver has claimed to have added the " + oFieldDefn.GetNameRef() + " field, but it did not!");
+
+                        System.err.println(sb.toString());
                     }
                     else
                     {
@@ -1473,7 +1504,10 @@ public class ogr2ogr
             /* layer for each source field */
             if (poDstFDefn == null)
             {
-                System.err.println("poDstFDefn == NULL.\n" );
+            	StringBuilder sb=new StringBuilder();
+                sb.append("poDstFDefn == NULL.\n" );
+
+                System.err.println(sb.toString());
                 return false;
             }
 
@@ -1563,9 +1597,11 @@ public class ogr2ogr
                     if( nGroupTransactions > 0)
                         poDstLayer.CommitTransaction();
 
-                    System.err.println(
+                	StringBuilder sb=new StringBuilder();
+                    sb.append(
                             "Unable to translate feature " + poFeature.GetFID() + " from layer " +
                             poSrcFDefn.GetName() );
+                    System.err.println(sb.toString());
 
                     poFeature.delete();
                     poFeature = null;
@@ -1636,7 +1672,8 @@ public class ogr2ogr
                             if( nGroupTransactions > 0)
                                 poDstLayer.CommitTransaction();
 
-                            System.err.println("Failed to reproject feature" + poFeature.GetFID() + " (geometry probably out of source or destination SRS).");
+                            StringBuilder sb=new StringBuilder();
+                            sb.append("Failed to reproject feature" + poFeature.GetFID() + " (geometry probably out of source or destination SRS).");
                             if( !bSkipFailures )
                             {
                                 poFeature.delete();

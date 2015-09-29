@@ -27,22 +27,25 @@ public class FgdbService {
 	
 	@POST
 	@Produces("application/zip")
-	public Response getFgdb(@PathParam("fgdbname") String fgdbName, String geoJson){
+	public Response getFgdb(@PathParam("fgdbname") String fgdbName, String geoJson){	
+		try {
 		String fgdbDirectory = "/opt/fgdb/";
 		Date now = new Date();
 		String fName = fgdbName + "-" + now.getTime();
 		
-		//Create a zip file name, named for the name of the geodatabase to be created.
+		// Create a zip file name, named for the name of the geodatabase to be created.
 		String outFileName =  fgdbDirectory + fName + ".zip";
+		File tempFile=File.createTempFile("fgdb",".tmp");
 		
 		// ogr2ogr command string, these are the command line arguments you would use normally
 		String[] cmd = {"-f", "FileGDB", fgdbDirectory + fName+".gdb", geoJson};
 		
-		//Execute the ogr2ogr command
-		ogr2ogr.main(cmd);
-		
 		//Time to zip the created file geodatabase and respond with a link to the zipped file.
-		try {
+			
+				
+		//Execute the ogr2ogr command
+			ogr2ogr.main(cmd);
+		
 			//Create the ZipOutputStream using a new FileOutputStream named for the zip to be created.
 			ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(outFileName));
 			
@@ -53,17 +56,23 @@ public class FgdbService {
 			
 			zout.close();
 			
+
+			File outFile = new File(outFileName);
+			ResponseBuilder responseBuilder = Response.ok((Object) outFile);
+			responseBuilder.header("Content-Disposition", "attachment; filename=\"fgdb.zip\"");
 			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			Response response= responseBuilder.build();
+			
+			// any cleanup necessary?
+			return response;
+			
+			// TODO: This should report some type of error to the user and return an HTTP error code, possibly 418.
+		} catch (IOException | ogr2ogrException e) {
 			e.printStackTrace();
+			ResponseBuilder responseBuilder=Response.serverError();
+			return responseBuilder.build();
 		}
 		
-		File outFile = new File(outFileName);
-		ResponseBuilder responseBuilder = Response.ok((Object) outFile);
-		responseBuilder.header("Content-Disposition", "attachment; filename=\"fgdb.zip\"");
-		
-		return responseBuilder.build();
 	}
 	
 	private static void addDirectory(ZipOutputStream zout, File fgdbDir){
